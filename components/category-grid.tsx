@@ -1,10 +1,10 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState } from "react"
-import { CategoryCard } from "./category-card"
-import { AffirmationModal } from "./affirmation-modal"
+import { useState } from 'react';
+import { CategoryCard } from './category-card';
+import { AffirmationModal } from './affirmation-modal';
 import {
   Home,
   DollarSign,
@@ -18,102 +18,144 @@ import {
   TrendingUp,
   Shield,
   Smile,
-} from "lucide-react"
+} from 'lucide-react';
 
 export interface Category {
-  id: string
-  title: string
-  icon: React.ElementType
-  gradient: string
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  gradient: {
+    from: string;
+    to: string;
+  };
 }
 
 const categories: Category[] = [
   {
-    id: "housing-home",
-    title: "Housing & Home",
+    id: 'housing-home',
+    title: 'Housing & Home',
     icon: Home,
-    gradient: "from-blue-400 to-cyan-400",
+    gradient: {
+      from: 'hsla(400, 100%, 86%, 0.78)',
+      to: 'hsla(688, 100%, 85%, 0.72)',
+    },
   },
   {
-    id: "finance-wealth",
-    title: "Finance & Wealth",
+    id: 'finance-wealth',
+    title: 'Finance & Wealth',
     icon: DollarSign,
-    gradient: "from-emerald-400 to-teal-400",
+    gradient: {
+      from: 'hsla(888, 68%, 82%, 0.78)',
+      to: 'hsla(774, 72%, 80%, 0.72)',
+    },
   },
   {
-    id: "health-wellbeing",
-    title: "Health & Wellbeing",
+    id: 'health-wellbeing',
+    title: 'Health & Wellbeing',
     icon: Heart,
-    gradient: "from-rose-400 to-pink-400",
+    gradient: {
+      from: 'hsla(900, 88%, 86%, 0.78)',
+      to: 'hsla(970, 70%, 95%, 0.72)',
+    },
   },
   {
-    id: "travel-adventure",
-    title: "Travel & Adventure",
+    id: 'travel-adventure',
+    title: 'Travel & Adventure',
     icon: Plane,
-    gradient: "from-amber-400 to-orange-400",
+    gradient: {
+      from: 'hsla(60, 100%, 85%, 0.78)',
+      to: 'hsla(2, 100%, 83%, 0.72)',
+    },
   },
   {
-    id: "relationships-love",
-    title: "Relationships & Love",
+    id: 'relationships-love',
+    title: 'Relationships & Love',
     icon: Users,
-    gradient: "from-purple-400 to-pink-400",
+    gradient: {
+      from: 'hsla(888, 88%, 86%, 0.78)',
+      to: 'hsla(700, 84%, 86%, 0.72)',
+    },
   },
   {
-    id: "creativity-expression",
-    title: "Creativity & Expression",
+    id: 'creativity-expression',
+    title: 'Creativity & Expression',
     icon: Palette,
-    gradient: "from-violet-400 to-purple-400",
+    gradient: {
+      from: 'hsla(752, 82%, 86%, 0.78)',
+      to: 'hsla(69, 76%, 85%, 0.72)',
+    },
   },
   {
-    id: "career-employment",
-    title: "Career & Employment",
+    id: 'career-employment',
+    title: 'Career & Employment',
     icon: Briefcase,
-    gradient: "from-indigo-400 to-blue-400",
+    gradient: {
+      from: 'hsla(671, 84%, 86%, 0.78)',
+      to: 'hsla(88, 100%, 85%, 0.72)',
+    },
   },
   {
-    id: "education-knowledge",
-    title: "Education & Knowledge",
+    id: 'education-knowledge',
+    title: 'Education & Knowledge',
     icon: BookOpen,
-    gradient: "from-cyan-400 to-blue-400",
+    gradient: {
+      from: 'hsla(206, 88%, 86%, 0.78)',
+      to: 'hsla(499, 100%, 82%, 0.72)',
+    },
   },
   {
-    id: "spirituality-peace",
-    title: "Spirituality & Inner Peace",
+    id: 'spirituality-peace',
+    title: 'Spirituality & Inner Peace',
     icon: Sparkles,
-    gradient: "from-teal-400 to-emerald-400",
+    gradient: {
+      from: 'hsla(688, 90%, 84%, 0.78)',
+      to: 'hsla(180, 76%, 82%, 0.72)',
+    },
   },
   {
-    id: "personal-growth",
-    title: "Personal Growth & Development",
+    id: 'personal-growth',
+    title: 'Personal Growth & Development',
     icon: TrendingUp,
-    gradient: "from-green-400 to-emerald-400",
+    gradient: {
+      from: 'hsla(60, 90%, 82%, 0.78)',
+      to: 'hsla(180, 76%, 80%, 0.72)',
+    },
   },
   {
-    id: "self-confidence",
-    title: "Self-Confidence & Empowerment",
+    id: 'self-confidence',
+    title: 'Self-Confidence & Empowerment',
     icon: Shield,
-    gradient: "from-yellow-400 to-amber-400",
+    gradient: {
+      from: 'hsla(60, 100%, 86%, 0.78)',
+      to: 'hsla(340, 90%, 85%, 0.72)',
+    },
   },
   {
-    id: "joy-happiness",
-    title: "Joy & Happiness",
+    id: 'joy-happiness',
+    title: 'Joy & Happiness',
     icon: Smile,
-    gradient: "from-orange-400 to-rose-400",
+    gradient: {
+      from: 'hsla(124, 100%, 85%, 0.78)',
+      to: 'hsla(340, 99%, 86%, 0.72)',
+    },
   },
-]
+];
 
 export function CategoryGrid() {
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6'>
         {categories.map((category, index) => (
           <CategoryCard
             key={category.id}
             category={category}
             onClick={() => setSelectedCategory(category)}
-            delay={index * 0.05}
+            delay={index * 0.35}
+            duration={6 + (index % 4) * 0.45}
           />
         ))}
       </div>
@@ -124,5 +166,5 @@ export function CategoryGrid() {
         onOpenChange={(open) => !open && setSelectedCategory(null)}
       />
     </>
-  )
+  );
 }
