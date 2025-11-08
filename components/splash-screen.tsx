@@ -102,7 +102,7 @@ export function SplashScreen({
             className='h-12 w-auto animate-float'
             priority
           />
-          {showCta && (
+          {/* {showCta && (
             <button
               type='button'
               onClick={onCtaClick}
@@ -110,7 +110,7 @@ export function SplashScreen({
             >
               {ctaLabel}
             </button>
-          )}
+          )} */}
         </div>
       )}
       <div className='relative z-0'>{children}</div>
