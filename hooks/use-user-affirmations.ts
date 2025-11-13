@@ -6,7 +6,6 @@ import {
   onSnapshot,
   orderBy,
   query,
-  where,
   type DocumentData,
 } from 'firebase/firestore';
 
@@ -22,6 +21,7 @@ export interface UserAffirmation {
   favorite: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  audioUrls?: Record<string, string>;
 }
 
 interface UseUserAffirmationsOptions {
@@ -31,7 +31,7 @@ interface UseUserAffirmationsOptions {
 
 export function useUserAffirmations(options: UseUserAffirmationsOptions = {}) {
   const { user } = useAuth();
-  const [affirmations, setAffirmations] = useState<UserAffirmation[]>([]);
+  const [rawAffirmations, setRawAffirmations] = useState<UserAffirmation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,7 @@ export function useUserAffirmations(options: UseUserAffirmationsOptions = {}) {
 
   useEffect(() => {
     if (!user) {
-      setAffirmations([]);
+      setRawAffirmations([]);
       setLoading(false);
       return;
     }
@@ -53,24 +53,29 @@ export function useUserAffirmations(options: UseUserAffirmationsOptions = {}) {
       'affirmations'
     );
 
-    const clauses = [];
-    if (favoritesOnly) {
-      clauses.push(where('favorite', '==', true));
-    }
-    if (categoryId) {
-      clauses.push(where('categoryId', '==', categoryId));
-    }
-
-    const affirmationsQuery =
-      clauses.length > 0
-        ? query(baseCollection, ...clauses, orderBy('createdAt', 'desc'))
-        : query(baseCollection, orderBy('createdAt', 'desc'));
+    const affirmationsQuery = query(
+      baseCollection,
+      orderBy('createdAt', 'desc')
+    );
 
     const unsubscribe = onSnapshot(
       affirmationsQuery,
       (snapshot) => {
         const nextAffirmations = snapshot.docs.map((docSnapshot) => {
           const data = docSnapshot.data() as DocumentData;
+          const audioUrlsRaw = data.audioUrls;
+          const audioUrls =
+            audioUrlsRaw && typeof audioUrlsRaw === 'object'
+              ? Object.entries(audioUrlsRaw).reduce<Record<string, string>>(
+                  (acc, [key, value]) => {
+                    if (typeof value === 'string') {
+                      acc[key] = value;
+                    }
+                    return acc;
+                  },
+                  {}
+                )
+              : {};
           return {
             id: docSnapshot.id,
             affirmation: (data.affirmation as string) ?? '',
@@ -80,9 +85,10 @@ export function useUserAffirmations(options: UseUserAffirmationsOptions = {}) {
             favorite: Boolean(data.favorite),
             createdAt: data.createdAt?.toDate?.() ?? undefined,
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,
+            audioUrls,
           } satisfies UserAffirmation;
         });
-        setAffirmations(nextAffirmations);
+        setRawAffirmations(nextAffirmations);
         setLoading(false);
       },
       (snapshotError) => {
@@ -100,11 +106,11 @@ export function useUserAffirmations(options: UseUserAffirmationsOptions = {}) {
     );
 
     return () => unsubscribe();
-  }, [categoryId, favoritesOnly, user]);
+  }, [user]);
 
   const categories = useMemo(() => {
     const uniques = new Map<string, string>();
-    affirmations.forEach((item) => {
+    rawAffirmations.forEach((item) => {
       if (item.categoryId) {
         uniques.set(item.categoryId, item.categoryTitle);
       }
@@ -113,7 +119,19 @@ export function useUserAffirmations(options: UseUserAffirmationsOptions = {}) {
       id,
       title,
     }));
-  }, [affirmations]);
+  }, [rawAffirmations]);
+
+  const affirmations = useMemo(() => {
+    return rawAffirmations.filter((item) => {
+      if (favoritesOnly && !item.favorite) {
+        return false;
+      }
+      if (categoryId && item.categoryId !== categoryId) {
+        return false;
+      }
+      return true;
+    });
+  }, [categoryId, favoritesOnly, rawAffirmations]);
 
   return {
     affirmations,

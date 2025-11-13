@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
-import { PlusCircle, FolderPlus } from 'lucide-react';
+import { PlusCircle, FolderPlus, Play } from 'lucide-react';
 
 import {
   Card,
@@ -19,11 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/providers/auth-provider';
 import { useUserAffirmations } from '@/hooks/use-user-affirmations';
+import { UserAffirmationCard } from '@/components/user-affirmation-card';
+import { firebaseDb, firebaseStorage } from '@/lib/firebase/client';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 export default function DashboardPage() {
   const { user, profile } = useAuth();
@@ -34,6 +36,7 @@ export default function DashboardPage() {
     categoryId: selectedCategory === 'all' ? null : selectedCategory,
   });
   const { toast } = useToast();
+  const [isPlayingAll, setIsPlayingAll] = useState(false);
 
   const playlistsComingSoon = () =>
     toast({
@@ -47,6 +50,112 @@ export default function DashboardPage() {
     const firstName = profile.displayName.trim().split(/\s+/)[0];
     return `${firstName}'s dashboard`;
   }, [profile?.displayName]);
+
+  const playSequentially = (url: string) =>
+    new Promise<void>((resolve, reject) => {
+      const audio = new Audio(url);
+      const cleanup = () => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+      };
+      audio.onended = () => {
+        cleanup();
+        resolve();
+      };
+      audio.onerror = (event) => {
+        cleanup();
+        reject(event);
+      };
+      audio.play().catch((error) => {
+        cleanup();
+        reject(error);
+      });
+    });
+
+  const playAll = async () => {
+    if (!user || affirmations.length === 0) {
+      return;
+    }
+
+    setIsPlayingAll(true);
+    const voiceId = profile?.voiceCloneId ?? 'EXAVITQu4vr4xnSDxMaL';
+    try {
+      for (const item of affirmations) {
+        let audioUrl = item.audioUrls?.[voiceId];
+        if (!audioUrl) {
+          const response = await fetch('/api/text-to-speech', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: item.affirmation,
+              voiceId,
+            }),
+          });
+
+          if (!response.ok) {
+            const detailText = await response.text();
+            try {
+              const detailJson = JSON.parse(detailText);
+              const status = detailJson?.detail?.detail?.status;
+              if (status === 'detected_unusual_activity') {
+                throw new Error(
+                  'ElevenLabs temporarily disabled free-tier synthesis due to unusual activity. Upgrade your ElevenLabs plan to continue using Play all.'
+                );
+              }
+              throw new Error(
+                detailJson?.error ??
+                  'Unable to generate audio for one of your affirmations.'
+              );
+            } catch (parseError) {
+              if (
+                parseError instanceof Error &&
+                parseError.message.includes('ElevenLabs temporarily')
+              ) {
+                throw parseError;
+              }
+              throw new Error(
+                `Unable to generate audio for one of your affirmations. ${detailText}`
+              );
+            }
+          }
+
+          const audioBlob = await response.blob();
+          const storageRef = ref(
+            firebaseStorage,
+            `users/${user.uid}/affirmations/${item.id}/audio/${voiceId}.mp3`
+          );
+          await uploadBytes(storageRef, audioBlob);
+          audioUrl = await getDownloadURL(storageRef);
+          await updateDoc(
+            doc(firebaseDb, 'users', user.uid, 'affirmations', item.id),
+            {
+              [`audioUrls.${voiceId}`]: audioUrl,
+              updatedAt: serverTimestamp(),
+            }
+          );
+        }
+
+        await playSequentially(audioUrl);
+      }
+      toast({
+        title: 'Playback finished',
+        description: 'All affirmations in this view have been played.',
+      });
+    } catch (error) {
+      console.error('[dashboard] Play all failed', error);
+      toast({
+        title: 'Playback failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Unable to play the full set. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPlayingAll(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -69,11 +178,20 @@ export default function DashboardPage() {
         <div>
           <h1 className='text-3xl font-semibold'>{greeting}</h1>
           <p className='text-muted-foreground'>
-            Review everything aiam has generated for you—filter by category,
-            spot favorites, and prep playlists.
+            Review your affirmations—filter by category, spot favorites, and
+            prep playlists.
           </p>
         </div>
         <div className='flex gap-3'>
+          <Button
+            variant='default'
+            onClick={playAll}
+            disabled={isPlayingAll || affirmations.length === 0}
+            className='flex items-center gap-2'
+          >
+            <Play className='h-4 w-4' />
+            {isPlayingAll ? 'Playing…' : 'Play all'}
+          </Button>
           <Button
             variant='secondary'
             onClick={playlistsComingSoon}
@@ -121,79 +239,33 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-6 grid-cols-1 md:grid-cols-2'>
               {Array.from({ length: 6 }).map((_, idx) => (
                 <Skeleton key={idx} className='h-64 rounded-2xl' />
               ))}
             </div>
           ) : affirmations.length === 0 ? (
-            <div className='flex flex-col items-center justify-center gap-4 py-16 text-center'>
-              <PlusCircle className='h-10 w-10 text-muted-foreground' />
-              <div>
-                <h3 className='text-lg font-medium'>No affirmations yet</h3>
-                <p className='text-sm text-muted-foreground'>
-                  Generate an affirmation from the home page to start building
-                  your collection.
-                </p>
+            <Card className='bg-muted/30'>
+              <div className='flex flex-col items-center justify-center gap-4 py-16 text-center'>
+                <PlusCircle className='h-10 w-10 text-muted-foreground' />
+                <div>
+                  <h3 className='text-lg font-medium'>No affirmations yet</h3>
+                  <p className='text-sm text-muted-foreground'>
+                    Generate an affirmation from the home page to start building
+                    your collection.
+                  </p>
+                </div>
               </div>
-            </div>
+            </Card>
           ) : (
-            <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-6 grid-cols-1 md:grid-cols-2'>
               {affirmations.map((item) => (
-                <AffirmationCard key={item.id} affirmation={item} />
+                <UserAffirmationCard key={item.id} affirmation={item} />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
     </main>
-  );
-}
-
-function AffirmationCard({
-  affirmation,
-}: {
-  affirmation: ReturnType<typeof useUserAffirmations>['affirmations'][number];
-}) {
-  return (
-    <Card className='h-full overflow-hidden'>
-      <CardHeader className='space-y-3'>
-        <div className='flex items-center justify-between'>
-          <Badge variant='secondary'>{affirmation.categoryTitle}</Badge>
-          {affirmation.favorite && <Badge>Favorite</Badge>}
-        </div>
-        <CardTitle className='text-base font-medium'>
-          {affirmation.affirmation}
-        </CardTitle>
-      </CardHeader>
-      {affirmation.imageUrl ? (
-        <div className='relative h-48 w-full'>
-          <Image
-            src={affirmation.imageUrl}
-            alt='Affirmation visualization'
-            fill
-            className='object-cover'
-          />
-        </div>
-      ) : (
-        <div className='flex h-48 items-center justify-center bg-muted text-sm text-muted-foreground'>
-          No image saved
-        </div>
-      )}
-      <CardContent className='space-y-2 text-xs text-muted-foreground'>
-        <p>
-          Created:{' '}
-          {affirmation.createdAt
-            ? affirmation.createdAt.toLocaleString()
-            : 'recently'}
-        </p>
-        <p>
-          Updated:{' '}
-          {affirmation.updatedAt
-            ? affirmation.updatedAt.toLocaleString()
-            : 'just now'}
-        </p>
-      </CardContent>
-    </Card>
   );
 }

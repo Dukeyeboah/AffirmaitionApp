@@ -30,13 +30,6 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-  //   apiKey: "AIzaSyDG3CamFgadW9EXXZ1yMgKLa8yzfU_6tMw",
-  //   authDomain: "aiam-95e87.firebaseapp.com",
-  //   projectId: "aiam-95e87",
-  //   storageBucket: "aiam-95e87.firebasestorage.app",
-  //   messagingSenderId: "1039070821059",
-  //   appId: "1:1039070821059:web:ee29002d5d3c5d30df8076",
-  //   measurementId: "G-D0FL2DDSQP"
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

@@ -48,8 +48,8 @@ export default function Home() {
               </p>
             )}
             <p className='max-w-2xl text-lg text-gray-600'>
-              Generate personalized affirmations to nurture your mind, body, and
-              soul.
+              Create Your Reality, One Affirmation at a Time with the power of
+              the “I Am”
             </p>
           </div>
 

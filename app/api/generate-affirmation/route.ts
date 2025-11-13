@@ -34,8 +34,8 @@ export async function POST(request: Request) {
         : '• Use a natural first-person opening such as "I", "I am", "I choose", or "My".',
       '• Present tense and realistic yet aspirational.',
       '• 20-32 words.',
-      '• Include a specific detail, sensation, or emotion tied to the category.',
-      '• Avoid repeating phrases like "I am worthy" or generic clichés.',
+      '• Include a specific, vivid detail, sensation, or action tied to the category so that it feels distinct from common phrases.',
+      '• Avoid repeating familiar phrasing such as "warm and inviting home" or generic affirmations you may have produced earlier—use fresh adjectives and imagery.',
       '• Return only the affirmation text with no quotation marks.',
     ].join('\n');
 

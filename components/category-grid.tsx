@@ -159,7 +159,7 @@ export function CategoryGrid() {
     (index: number) => {
       if (!isAuthenticated) {
         toast({
-          title: 'Create your free AiAm account',
+          title: 'Create your free aiam account',
           description:
             'Sign up or log in to unlock affirmations and get 100 starter credits.',
         });

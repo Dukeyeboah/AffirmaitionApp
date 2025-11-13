@@ -40,6 +40,17 @@ export interface UserProfile {
   email: string | null;
   displayName: string;
   photoURL: string | null;
+  portraitImageUrl?: string | null;
+  fullBodyImageUrl?: string | null;
+  voiceCloneId?: string | null;
+  voiceCloneName?: string | null;
+  ageRange?: string | null;
+  gender?: string | null;
+  ethnicity?: string | null;
+  nationality?: string | null;
+  autoGenerateImages?: boolean;
+  defaultAspectRatio?: string | null;
+  tier?: string | null;
   credits: number;
   savedCount: number;
 }
@@ -59,6 +70,7 @@ interface AuthContextValue {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   provider: GoogleAuthProvider;
 }
 
@@ -110,6 +122,17 @@ const ensureUserProfile = async (firebaseUser: User): Promise<UserProfile> => {
     email: firebaseUser.email ?? null,
     displayName: baseDisplayName,
     photoURL: firebaseUser.photoURL ?? null,
+    portraitImageUrl: null,
+    fullBodyImageUrl: null,
+    voiceCloneId: null,
+    voiceCloneName: null,
+    ageRange: null,
+    gender: null,
+    ethnicity: null,
+    nationality: null,
+    autoGenerateImages: true,
+    defaultAspectRatio: '1:1',
+    tier: null,
     credits: DEFAULT_CREDITS,
     savedCount: 0,
   };
@@ -130,6 +153,20 @@ const ensureUserProfile = async (firebaseUser: User): Promise<UserProfile> => {
       (data.displayName as string | undefined) ?? baseProfile.displayName,
     photoURL:
       (data.photoURL as string | undefined) ?? firebaseUser.photoURL ?? null,
+    portraitImageUrl: (data.portraitImageUrl as string | undefined) ?? null,
+    fullBodyImageUrl: (data.fullBodyImageUrl as string | undefined) ?? null,
+    voiceCloneId: (data.voiceCloneId as string | undefined) ?? null,
+    voiceCloneName: (data.voiceCloneName as string | undefined) ?? null,
+    ageRange: (data.ageRange as string | undefined) ?? null,
+    gender: (data.gender as string | undefined) ?? null,
+    ethnicity: (data.ethnicity as string | undefined) ?? null,
+    nationality: (data.nationality as string | undefined) ?? null,
+    autoGenerateImages:
+      typeof data.autoGenerateImages === 'boolean'
+        ? data.autoGenerateImages
+        : true,
+    defaultAspectRatio:
+      (data.defaultAspectRatio as string | undefined) ?? '1:1',
     credits: typeof data.credits === 'number' ? data.credits : DEFAULT_CREDITS,
     savedCount: typeof data.savedCount === 'number' ? data.savedCount : 0,
   };
@@ -137,6 +174,18 @@ const ensureUserProfile = async (firebaseUser: User): Promise<UserProfile> => {
   const needsUpdate =
     mergedProfile.displayName !== data.displayName ||
     mergedProfile.photoURL !== data.photoURL ||
+    mergedProfile.portraitImageUrl !== data.portraitImageUrl ||
+    mergedProfile.fullBodyImageUrl !== data.fullBodyImageUrl ||
+    mergedProfile.voiceCloneId !== data.voiceCloneId ||
+    mergedProfile.voiceCloneName !== data.voiceCloneName ||
+    mergedProfile.ageRange !== (data.ageRange as string | undefined) ||
+    mergedProfile.gender !== (data.gender as string | undefined) ||
+    mergedProfile.ethnicity !== (data.ethnicity as string | undefined) ||
+    mergedProfile.nationality !== (data.nationality as string | undefined) ||
+    mergedProfile.autoGenerateImages !== data.autoGenerateImages ||
+    mergedProfile.defaultAspectRatio !==
+      (data.defaultAspectRatio as string | undefined) ||
+    mergedProfile.tier !== (data.tier as string | undefined) ||
     typeof data.credits !== 'number' ||
     typeof data.savedCount !== 'number';
 
@@ -144,6 +193,17 @@ const ensureUserProfile = async (firebaseUser: User): Promise<UserProfile> => {
     await updateDoc(userRef, {
       displayName: mergedProfile.displayName,
       photoURL: mergedProfile.photoURL,
+      portraitImageUrl: mergedProfile.portraitImageUrl ?? null,
+      fullBodyImageUrl: mergedProfile.fullBodyImageUrl ?? null,
+      voiceCloneId: mergedProfile.voiceCloneId ?? null,
+      voiceCloneName: mergedProfile.voiceCloneName ?? null,
+      ageRange: mergedProfile.ageRange ?? null,
+      gender: mergedProfile.gender ?? null,
+      ethnicity: mergedProfile.ethnicity ?? null,
+      nationality: mergedProfile.nationality ?? null,
+      autoGenerateImages: mergedProfile.autoGenerateImages ?? true,
+      defaultAspectRatio: mergedProfile.defaultAspectRatio ?? '1:1',
+      tier: mergedProfile.tier ?? null,
       credits: mergedProfile.credits,
       savedCount: mergedProfile.savedCount,
       updatedAt: serverTimestamp(),
@@ -254,6 +314,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    const current = firebaseAuth.currentUser;
+    if (!current) {
+      return;
+    }
+    try {
+      await current.reload();
+      const reloaded = firebaseAuth.currentUser;
+      if (reloaded) {
+        setUser(reloaded);
+        const resolvedProfile = await ensureUserProfile(reloaded);
+        setProfile(resolvedProfile);
+      }
+    } catch (error) {
+      console.error('[auth] Failed to refresh profile', error);
+    }
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -264,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signInWithGoogle,
       signOutUser,
+      refreshProfile,
       provider: googleAuthProvider,
     }),
     [
@@ -275,6 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signInWithGoogle,
       signOutUser,
+      refreshProfile,
     ]
   );
 

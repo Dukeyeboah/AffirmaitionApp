@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { HeartPulse } from 'lucide-react';
 
@@ -19,10 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserAffirmations } from '@/hooks/use-user-affirmations';
 import { useAuth } from '@/providers/auth-provider';
+import { UserAffirmationCard } from '@/components/user-affirmation-card';
 
 export default function SavedPage() {
   const { user } = useAuth();
@@ -97,7 +96,7 @@ export default function SavedPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
               {Array.from({ length: 6 }).map((_, idx) => (
                 <Skeleton key={idx} className='h-64 rounded-2xl' />
               ))}
@@ -115,38 +114,13 @@ export default function SavedPage() {
               </div>
             </div>
           ) : (
-            <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
               {affirmations.map((item) => (
-                <Card key={item.id} className='overflow-hidden'>
-                  <CardHeader className='space-y-3'>
-                    <Badge variant='secondary'>{item.categoryTitle}</Badge>
-                    <CardTitle className='text-base font-medium'>
-                      {item.affirmation}
-                    </CardTitle>
-                  </CardHeader>
-                  {item.imageUrl ? (
-                    <div className='relative h-44 w-full'>
-                      <Image
-                        src={item.imageUrl}
-                        alt='Saved affirmation'
-                        fill
-                        className='object-cover'
-                      />
-                    </div>
-                  ) : (
-                    <div className='flex h-44 items-center justify-center bg-muted text-sm text-muted-foreground'>
-                      Image not available
-                    </div>
-                  )}
-                  <CardContent className='space-y-2 text-xs text-muted-foreground'>
-                    <p>
-                      Saved:{' '}
-                      {item.updatedAt
-                        ? item.updatedAt.toLocaleString()
-                        : 'recently'}
-                    </p>
-                  </CardContent>
-                </Card>
+                <UserAffirmationCard
+                  key={item.id}
+                  affirmation={item}
+                  showFavoriteBadge={false}
+                />
               ))}
             </div>
           )}
